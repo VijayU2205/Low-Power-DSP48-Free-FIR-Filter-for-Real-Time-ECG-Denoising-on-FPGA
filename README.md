@@ -1,196 +1,195 @@
-# Two-Stage Low-Power FPGA Architecture for Physical-Layer Anomaly Detection in EV Charging Systems
+# Low-Power DSP48-Free FIR Filter for Real-Time ECG Denoising on FPGA
 
 ---
 
 ## Abstract
 
-Modern EV charging infrastructure is increasingly vulnerable to **physical-layer disturbances** such as electromagnetic interference (EMI), harmonic distortions, and voltage transients. These anomalies can bypass traditional software-based cybersecurity mechanisms and directly impact hardware reliability.
+Electrocardiogram (ECG) signals are highly susceptible to various sources of noise such as power-line interference, muscle artifacts, and high-frequency disturbances, which can reduce the accuracy of cardiac diagnosis. This project presents a **low-power, DSP48-free FIR filter architecture** implemented on an **Artix-7 FPGA** for real-time ECG denoising.
 
-This project presents a **low-power, FPGA-based anomaly detection system** using a **two-stage triage architecture**. The system employs a lightweight **dv/dt and zero-crossing-based hardware filter** for continuous monitoring, combined with an **event-driven autoencoder neural network** for deep inspection. The architecture leverages **clock gating** to activate high-performance processing only when anomalies are suspected, significantly reducing power consumption.
+Instead of using dedicated DSP48 multiplier blocks, the proposed design employs **symmetric coefficient folding**, **shift-and-add multiplication**, and **vertical pipelining** to reduce hardware complexity and dynamic power consumption while maintaining filtering performance. ECG samples generated in MATLAB are streamed to the FPGA, processed in real time, and transmitted to a Python-based visualization dashboard through UART communication.
 
-A hardware-in-the-loop setup using dual-laptop communication via UART demonstrates real-time detection and visualization of anomalies. Experimental results validate the system’s ability to detect both high-amplitude transients and low-amplitude stealth harmonics with microsecond latency, making it suitable for next-generation smart grid and EV charging security applications.
+The implemented architecture demonstrates efficient real-time ECG filtering with low resource utilization, making it suitable for wearable healthcare devices, portable biomedical instruments, and energy-efficient embedded systems.
 
 ---
 
 ## Keywords
 
-FPGA, Low-Power Design, Anomaly Detection, Autoencoder, EMI, Harmonics, dv/dt, Physical-Layer Security, Edge AI, EV Charging Systems
+FPGA, FIR Filter, ECG Denoising, Low-Power Design, DSP48-Free Architecture, Shift-and-Add Multiplication, Symmetric FIR Filter, UART Communication, Real-Time Signal Processing, Artix-7 FPGA
 
 ---
 
 ## Problem Statement
 
-EV charging systems operate on high-power analog signals that are susceptible to **physical-layer disturbances** such as:
+ECG signals acquired from patients are often contaminated by noise introduced from electrical interference, muscle activity, and motion artifacts. Conventional FPGA implementations of FIR filters typically depend on DSP48 multiplier blocks, which increase hardware utilization and dynamic power consumption.
 
-* Electromagnetic Interference (EMI)
-* High-frequency harmonics
-* Voltage spikes and transients
-* Phase and waveform distortions
-
-These disturbances can:
-
-* Bypass traditional software-based security systems
-* Cause battery degradation or hardware damage
-* Lead to instability in smart grid systems
-
-Conventional microcontroller-based monitoring systems are **too slow** to detect these sub-cycle anomalies, necessitating a **real-time hardware-based solution**.
+For wearable and battery-operated healthcare systems, there is a growing need for a hardware-efficient ECG filtering solution that minimizes power consumption while providing reliable real-time performance.
 
 ---
 
 ## Objectives
 
-The primary objectives of this project are:
+The objectives of this project are:
 
-* To design a **low-power FPGA-based anomaly detection system**
-* To implement a **two-stage triage architecture** for efficient processing
-* To detect both **high-amplitude and low-amplitude waveform anomalies**
-* To reduce unnecessary power consumption using **clock gating techniques**
-* To provide **real-time visualization and monitoring** using a dual-laptop setup
-* To support **hardware-in-the-loop simulation for validation**
+- Design a **32-tap low-pass FIR filter** for ECG denoising.
+- Eliminate DSP48 multiplier usage through **shift-and-add arithmetic**.
+- Reduce hardware complexity using **symmetric coefficient folding**.
+- Improve timing performance using **vertical pipelining**.
+- Implement and verify the architecture on an **Artix-7 FPGA**.
+- Perform real-time ECG acquisition and visualization using UART communication.
+- Evaluate timing, resource utilization, and power consumption.
 
 ---
 
 ## System Architecture
 
-The proposed system consists of the following major components:
+The complete system consists of four major modules.
 
-### Input Node (Laptop 1)
+### ECG Signal Generation (MATLAB)
 
-* Python-based waveform generator
-* Generates:
-
-  * Clean sine wave (normal condition)
-  * EMI noise
-  * Harmonic distortions
-  * Voltage spikes
-* Sends data via UART to FPGA
+- Generates clean ECG waveform.
+- Adds high-frequency noise for testing.
+- Designs a 32-tap low-pass FIR filter.
+- Generates quantized FIR coefficients.
+- Exports ECG samples for FPGA simulation.
 
 ---
 
-### FPGA Processing Unit (Core System)
+### FPGA Processing Unit
 
-#### Stage 1: Triage Block (Always ON)
+The FPGA performs real-time ECG filtering using a DSP48-free architecture.
 
-* Operates at ~10 MHz
-* Implements:
+#### Delay Line
 
-  * dv/dt (rate of change) detection
-  * Zero-crossing jitter analysis
-  * Periodic health-check trigger
-* Generates wake-up signal for Stage 2
+- Stores the previous ECG samples.
+- Provides input samples for FIR computation.
 
----
+#### Symmetric Pre-Adder
 
-#### Stage 2: Autoencoder Block (Event-Driven)
+- Exploits coefficient symmetry.
+- Reduces the number of multiplication operations.
 
-* Operates at ~100 MHz (clock gated using BUFGCE)
-* Performs:
+#### Shift-and-Add Multiplier
 
-  * Signal reconstruction
-  * Mean Squared Error (MSE) computation
-* Detects anomalies based on reconstruction error
+- Replaces hardware multipliers using shift and addition operations.
+- Eliminates DSP48 block usage.
 
----
+#### Pipelined MAC Unit
 
-#### Clock Gating Unit
+- Performs accumulation in multiple pipeline stages.
+- Reduces combinational delay.
+- Improves maximum operating frequency.
 
-* Dynamically enables/disables high-frequency clock
-* Reduces power consumption during normal operation
+#### UART Transmitter
 
----
-
-#### UART Output Module
-
-* Sends processed data:
-
-  * Original signal
-  * Reconstructed signal
-  * Anomaly score (MSE)
+- Sends filtered ECG samples to the host computer.
+- Enables continuous real-time communication.
 
 ---
 
-### Output Node (Laptop 2)
+### Host Computer (Python)
 
-* Python-based dashboard
-* Displays:
+A Python-based application performs:
 
-  * Real-time waveform comparison
-  * Anomaly detection graph
-  * System status (Normal / Attack)
+- UART data acquisition
+- Real-time ECG plotting
+- Heart-rate estimation
+- Live visualization of noisy and filtered ECG signals
 
 ---
 
 ## Working Principle
 
-1. Laptop 1 generates and transmits waveform samples to FPGA
-2. Stage 1 continuously monitors signal characteristics:
-
-   * If normal → system remains in low-power mode
-   * If anomaly suspected → triggers Stage 2
-3. Stage 2 autoencoder reconstructs the waveform
-4. Reconstruction error (MSE) is calculated
-5. If error exceeds threshold:
-
-   * Anomaly is detected
-   * Alert signal is generated
-6. Results are transmitted to Laptop 2 for visualization
+1. MATLAB generates noisy ECG samples.
+2. ECG samples are provided to the FPGA.
+3. Samples pass through the FIR delay line.
+4. Symmetric samples are added using the pre-adder stage.
+5. Shift-and-add arithmetic performs coefficient multiplication.
+6. Pipeline stages accumulate all tap outputs.
+7. Filtered ECG samples are transmitted through UART.
+8. Python receives and visualizes the ECG waveform in real time.
 
 ---
 
-## Experimental Results and Discussion
+## Design Features
 
-The system was tested using simulated waveform conditions, including:
+- DSP48-Free FIR Architecture
+- 32-Tap Linear Phase FIR Filter
+- Symmetric Coefficient Folding
+- Shift-and-Add Multiplication
+- Vertical Pipelining
+- UART-Based Real-Time Streaming
+- Low Dynamic Power
+- FPGA-Friendly RTL Design
 
-* Clean sinusoidal signals
-* High-frequency EMI noise
-* Voltage spikes
-* Low-amplitude harmonic distortions
+---
 
-Results demonstrate:
+## Experimental Results
 
-* Accurate detection of both transient and stealth anomalies
-* Significant reduction in unnecessary high-power computation
-* Fast response time (microsecond-level latency)
-* Stable performance across repeated test conditions
+The implemented design was validated using MATLAB-generated ECG signals with added noise.
+
+The results demonstrate:
+
+- Successful removal of high-frequency noise
+- Preservation of ECG waveform morphology
+- Stable real-time filtering
+- DSP48-free hardware implementation
+- Reduced dynamic power consumption
+- Successful UART communication with live visualization
+
+Power analysis performed using Vivado indicates a dynamic power consumption of approximately **3 mW** for the optimized implementation.
 
 ---
 
 ## Conclusion
 
-This project presents an efficient and scalable **hardware-based anomaly detection system** for EV charging infrastructure. By combining **lightweight triage logic with AI-based deep inspection**, the system achieves:
+A low-power 32-tap FIR filter for ECG denoising was successfully designed and implemented on an Artix-7 FPGA. The proposed DSP48-free architecture combines symmetric coefficient folding, shift-and-add multiplication, and vertical pipelining to achieve efficient real-time filtering while reducing hardware resource utilization and dynamic power consumption.
 
-* High detection accuracy
-* Low power consumption
-* Real-time response capability
-
-The architecture is well-suited for deployment in **smart grids, EV charging stations, and critical power systems**.
+The architecture is suitable for wearable healthcare devices, portable ECG monitoring systems, and other low-power biomedical signal processing applications.
 
 ---
 
 ## Future Scope
 
-* Integration with real ADC (analog signal acquisition)
-* FFT-based frequency-domain anomaly detection
-* Multi-channel signal monitoring
-* Deployment on real EV charging systems
-* AI-based anomaly classification (type identification)
-* Integration with smart grid infrastructure
+Future improvements include:
+
+- Adaptive FIR filtering for varying noise conditions
+- Higher-order FIR filter implementations
+- Multi-channel ECG processing
+- ASIC implementation for ultra-low-power applications
+- Integration with wearable healthcare devices
+- Edge AI-assisted ECG anomaly detection
 
 ---
 
-##  Repository Structure
+## Repository Structure
 
-```id="structure"
-2Stage-LowPower-FPGA-AnomalyDetection-EV/
+```text
+LowPower-FIR-ECG-Denoising-FPGA/
 │
-├── rtl/                 # Verilog modules (dv/dt, Autoencoder, UART, Clock Gating)
-├── ai/                  # Python scripts for training & quantization
-├── scripts/             # Laptop 1 (input) and Laptop 2 (dashboard)
-├── testbench/           # Simulation files
-├── docs/                # Reports, IEEE paper, diagrams
+├── rtl/                 # Verilog RTL modules
+├── matlab/              # FIR design and coefficient generation
+├── python/              # UART interface and ECG visualization
+├── simulation/          # Vivado simulation files
+├── constraints/         # FPGA XDC files
+├── docs/                # Project report, poster, presentation
 └── README.md
 ```
 
-## 📄 License
+---
 
-This project is intended for academic and research purposes.
+## Tools and Technologies
+
+- Xilinx Vivado 2022.2
+- Verilog HDL
+- MATLAB
+- Python 3
+- NumPy
+- Matplotlib
+- PySerial
+- Artix-7 FPGA (Basys 3)
+
+---
+
+## License
+
+This project was developed for academic and research purposes as part of an undergraduate engineering project.
